@@ -1,0 +1,61 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33205.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CryptographyAlgorithms", "CryptographyAlgorithms\CryptographyAlgorithms.csproj", "{BAFEBDB6-E9CC-48A7-9CD5-58072FC41868}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Server", "Server\Server.csproj", "{5A7D849A-CB0C-4CAC-9450-E2745C1B8042}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Client", "Client\Client.csproj", "{2E309FBE-AFEB-4F90-99C3-0BB437FDE0E0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileClientUI", "FileClientUI\FileClientUI.csproj", "{E27B99A7-2356-47FB-8047-704E568C6B5F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BAFEBDB6-E9CC-48A7-9CD5-58072FC41868}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BAFEBDB6-E9CC-48A7-9CD5-58072FC41868}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BAFEBDB6-E9CC-48A7-9CD5-58072FC41868}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BAFEBDB6-E9CC-48A7-9CD5-58072FC41868}.Debug|x86.Build.0 = Debug|Any CPU
+		{BAFEBDB6-E9CC-48A7-9CD5-58072FC41868}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BAFEBDB6-E9CC-48A7-9CD5-58072FC41868}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BAFEBDB6-E9CC-48A7-9CD5-58072FC41868}.Release|x86.ActiveCfg = Release|Any CPU
+		{BAFEBDB6-E9CC-48A7-9CD5-58072FC41868}.Release|x86.Build.0 = Release|Any CPU
+		{5A7D849A-CB0C-4CAC-9450-E2745C1B8042}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A7D849A-CB0C-4CAC-9450-E2745C1B8042}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A7D849A-CB0C-4CAC-9450-E2745C1B8042}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5A7D849A-CB0C-4CAC-9450-E2745C1B8042}.Debug|x86.Build.0 = Debug|Any CPU
+		{5A7D849A-CB0C-4CAC-9450-E2745C1B8042}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A7D849A-CB0C-4CAC-9450-E2745C1B8042}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A7D849A-CB0C-4CAC-9450-E2745C1B8042}.Release|x86.ActiveCfg = Release|Any CPU
+		{5A7D849A-CB0C-4CAC-9450-E2745C1B8042}.Release|x86.Build.0 = Release|Any CPU
+		{2E309FBE-AFEB-4F90-99C3-0BB437FDE0E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E309FBE-AFEB-4F90-99C3-0BB437FDE0E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E309FBE-AFEB-4F90-99C3-0BB437FDE0E0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2E309FBE-AFEB-4F90-99C3-0BB437FDE0E0}.Debug|x86.Build.0 = Debug|Any CPU
+		{2E309FBE-AFEB-4F90-99C3-0BB437FDE0E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E309FBE-AFEB-4F90-99C3-0BB437FDE0E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E309FBE-AFEB-4F90-99C3-0BB437FDE0E0}.Release|x86.ActiveCfg = Release|Any CPU
+		{2E309FBE-AFEB-4F90-99C3-0BB437FDE0E0}.Release|x86.Build.0 = Release|Any CPU
+		{E27B99A7-2356-47FB-8047-704E568C6B5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E27B99A7-2356-47FB-8047-704E568C6B5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E27B99A7-2356-47FB-8047-704E568C6B5F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E27B99A7-2356-47FB-8047-704E568C6B5F}.Debug|x86.Build.0 = Debug|Any CPU
+		{E27B99A7-2356-47FB-8047-704E568C6B5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E27B99A7-2356-47FB-8047-704E568C6B5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E27B99A7-2356-47FB-8047-704E568C6B5F}.Release|x86.ActiveCfg = Release|Any CPU
+		{E27B99A7-2356-47FB-8047-704E568C6B5F}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {97021203-BA9B-4D05-9B35-06CFC1DA52EE}
+	EndGlobalSection
+EndGlobal
