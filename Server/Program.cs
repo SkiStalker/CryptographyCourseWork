@@ -7,7 +7,7 @@ namespace Server
     {
         static void Main(string[] args)
         {
-            FileServer server = new FileServer(new Config("/", "127.0.0.1", 5000));
+            FileServer server = new FileServer(new Config(".", "127.0.0.1", 8000));
             server.Run();
         }
     }

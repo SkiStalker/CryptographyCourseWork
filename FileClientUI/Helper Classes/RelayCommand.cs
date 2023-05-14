@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace FileClientUI
@@ -13,14 +14,8 @@ namespace FileClientUI
     /// </summary>
     public class RelayCommand : ICommand
     {
-        #region Fields
-
         readonly Action<object> _execute;
-        readonly Predicate<object> _canExecute;        
-
-        #endregion // Fields
-
-        #region Constructors
+        readonly Predicate<object> _canExecute;
 
         /// <summary>
         /// Creates a new command that can always execute.
@@ -42,12 +37,8 @@ namespace FileClientUI
                 throw new ArgumentNullException("execute");
 
             _execute = execute;
-            _canExecute = canExecute;           
+            _canExecute = canExecute;
         }
-
-        #endregion // Constructors
-
-        #region ICommand Members
 
         [DebuggerStepThrough]
         public bool CanExecute(object parameters)
@@ -61,11 +52,9 @@ namespace FileClientUI
             remove { CommandManager.RequerySuggested -= value; }
         }
 
-        public void Execute(object parameters)
+        public async void Execute(object parameters)
         {
-            _execute(parameters);
+            await Task.Run(() => _execute(parameters));
         }
-
-        #endregion // ICommand Members
     }
 }

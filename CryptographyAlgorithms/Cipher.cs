@@ -92,13 +92,15 @@ public class Cipher
         this.paddingType = paddingType;
     }
 
+    public event Action<int, int> NotifyCryptProgress;
+
     private void ThreadCrypt(int i, byte[] tmpData, byte[] cryptData, int off, Semaphore semaphore,
         Func<byte[], byte[]> crypt)
     {
-        int threadI = i;
+        int threadOff = i;
         byte[] threadTmpData = new byte[tmpData.Length];
         tmpData.CopyTo(threadTmpData, 0);
-        byte[] threadEncryptData = cryptData;
+        byte[] threadCryptData = cryptData;
         new Thread(() =>
         {
             byte[] threadData = crypt(threadTmpData);
@@ -106,7 +108,8 @@ public class Cipher
 
             for (int j = 0; j < threadData.Length; j++)
             {
-                threadEncryptData[j + threadI + off] = threadData[j];
+                threadCryptData[j + threadOff + off] = threadData[j];
+                NotifyCryptProgress?.Invoke(j + threadOff + off, threadCryptData.Length);
             }
 
             semaphore.Release();
@@ -227,6 +230,7 @@ public class Cipher
         }
 
         Semaphore semaphore = new Semaphore(0, data.Length / blockLength);
+        
         for (int i = 0; i < data.Length; i += blockLength)
         {
             byte[] tmpData = data.Take(new Range(i, i + blockLength)).ToArray() ??
@@ -364,6 +368,7 @@ public class Cipher
                 for (int j = 0; j < cryptData.Length; j++)
                 {
                     encryptData[j + i + off] = cryptData[j];
+                    NotifyCryptProgress?.Invoke(j + i + off, data.Length);
                 }
             }
         }
@@ -610,6 +615,7 @@ public class Cipher
                 for (int j = 0; j < cryptData.Length; j++)
                 {
                     decryptData[j + i + off] = cryptData[j];
+                    NotifyCryptProgress?.Invoke(j + i + off, data.Length);
                 }
             }
         }

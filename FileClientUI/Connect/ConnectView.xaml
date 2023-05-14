@@ -9,8 +9,8 @@
         <Grid Height="100" Width="250">
             <Label Content="Ip address" HorizontalAlignment="Left" VerticalAlignment="Top"/>
             <Label Content="Port" HorizontalAlignment="Left"  VerticalAlignment="Center"/>
-            <TextBox HorizontalAlignment="Right" TextWrapping="Wrap" Text="{Binding ServerIp}" VerticalAlignment="Top" Width="120"/>
-            <TextBox HorizontalAlignment="Right"  TextWrapping="Wrap" Text="{Binding ServerPort}" VerticalAlignment="Center" Width="120"/>
+            <TextBox HorizontalAlignment="Right" TextWrapping="Wrap" Text="{Binding ServerIp, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Top" Width="120"/>
+            <TextBox HorizontalAlignment="Right"  TextWrapping="Wrap" Text="{Binding ServerPort, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Width="120"/>
             <Button Content="Connect" HorizontalAlignment="Right"  VerticalAlignment="Bottom" Width="120" Command="{Binding Connect}"/>
 
         </Grid>

@@ -38,7 +38,7 @@ public class FileServer
                         {
                             Console.WriteLine(
                                 $"Client with ip \"{clientIpEndpoint.Address}\" and port \"{clientIpEndpoint.Port}\""
-                                + $"connected");
+                                + $" connected");
                         }
                         else
                         {
@@ -51,7 +51,7 @@ public class FileServer
                         {
                             Console.WriteLine(
                                 $"Client with ip \"{clientIpEndpoint.Address}\" and port \"{clientIpEndpoint.Port}\""
-                                + $"disconnected");
+                                + $" disconnected");
                         }
                         else
                         {

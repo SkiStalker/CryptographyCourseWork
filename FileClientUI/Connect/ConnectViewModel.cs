@@ -12,26 +12,34 @@ namespace FileClientUI
     {
         public string Name => "Connect";
 
-        public string? serverIp;
-        private ICommand? _connect;
-        public string? serverPort;
-        FileClient fileClient;
+        private string? serverIp;
+        private ICommand? connect;
+        private string? serverPort;
+        private readonly FileClient fileClient;
 
         public ConnectViewModel()
         {
-            this.fileClient= new FileClient();
+            this.fileClient = new FileClient();
         }
 
         public string? ServerIp
         {
-            get { return serverIp; }
-            set { serverIp = value; OnPropertyChanged("ServerIp"); }
+            get => serverIp;
+            set
+            {
+                serverIp = value;
+                OnPropertyChanged("ServerIp");
+            }
         }
 
         public string? ServerPort
         {
-            get { return serverPort; }
-            set { serverPort = value; OnPropertyChanged("ServerPort"); }
+            get => serverPort;
+            set
+            {
+                serverPort = value;
+                OnPropertyChanged("ServerPort");
+            }
         }
 
 
@@ -39,33 +47,19 @@ namespace FileClientUI
         {
             get
             {
-                if (_connect == null)
+                return connect ??= new RelayCommand(param =>
                 {
-                    _connect = new RelayCommand(param =>
+                    try
                     {
-                        try
-                        {
-                            fileClient.Connect(serverIp ?? "", int.Parse(serverPort ?? ""));
-                            Messenger.Default.Send(fileClient);
-                        }
-                        catch
-                        {
-                            MessageBox.Show("Can not connect to server");
-                        }
-
-                    }, param =>
+                        fileClient.Connect(serverIp ?? "", int.Parse(serverPort ?? ""));
+                        Messenger.Default.Send(fileClient);
+                    }
+                    catch
                     {
-                        return serverIp != "" && serverPort != "";
-                    });
-                }
-                return _connect;
+                        MessageBox.Show("Can not connect to server");
+                    }
+                }, param => !string.IsNullOrEmpty(serverIp) && !string.IsNullOrEmpty(serverPort));
             }
-  
         }
-
-
-
-
     }
-
 }

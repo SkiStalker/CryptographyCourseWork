@@ -1,14 +1,12 @@
 ﻿using System.Net;
-using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using CryptographyAlgorithms;
 
 namespace Client;
 
-public class FileClient
+public class FileClient : IDisposable
 {
     private enum Operation : byte
     {
@@ -16,7 +14,8 @@ public class FileClient
         UploadFile,
         DownloadFile,
         UpdateFile,
-        CloseConnection
+        CloseConnection,
+        DeleteFile
     }
 
     private enum OperationStatus : byte
@@ -40,13 +39,23 @@ public class FileClient
         cipher = null;
     }
 
+
+    public void AddCryptCallback(Action<int, int> callback)
+    {
+        if (cipher != null)
+        {
+            cipher.NotifyCryptProgress += callback;
+        }
+    }
+
+
     private XTR.PublicKey ReadPublicKey()
     {
         if (reader == null || writer == null)
         {
             throw new NullReferenceException();
         }
-        
+
         int yLength = reader.ReadInt32();
         byte[] y = reader.ReadBytes(yLength);
         int gLength = reader.ReadInt32();
@@ -68,19 +77,20 @@ public class FileClient
         {
             throw new NullReferenceException();
         }
-        
+
         XTR.EncryptedMessage asymmetricData = xtr.Encrypt(new BigInteger(data, true), publicKey);
 
         int aLength = asymmetricData.A.GetByteCount();
         writer.Write(aLength);
         writer.Write(asymmetricData.A.ToByteArray());
-        
+
         int bLength = asymmetricData.B.GetByteCount();
         writer.Write(bLength);
         writer.Write(asymmetricData.B.ToByteArray());
-        
+        writer.Flush();
     }
-    
+
+
     public void Connect(string ip, int port)
     {
         try
@@ -89,29 +99,22 @@ public class FileClient
             NetworkStream ns = client.GetStream();
 
             reader = new BinaryReader(ns);
-            writer = new BinaryWriter(ns);
+            writer = new BinaryWriter(ns);  
 
             XTR xtr = new XTR(640, XTR.PrimaryTest.MillerRabin, 0.9);
 
             XTR.PublicKey publicKey = ReadPublicKey();
 
             byte[] sessionKey = Cipher.GenerateKey(512);
-            
-            
+
+
             WriteAsymmetricData(sessionKey, xtr, publicKey);
-            
             byte[] iv = Cipher.GenerateInitVector(160);
-            
             
             WriteAsymmetricData(iv, xtr, publicKey);
 
             cipher = new Cipher(sessionKey, 160, Cipher.AlgorithmType.SHACAL1, Cipher.CryptRule.RD,
                 Cipher.PaddingType.PKCS7, iv);
-
-            if ((OperationStatus)reader.ReadByte() != OperationStatus.Success)
-            {
-                throw new Exception("Failure key exchange");
-            }
         }
         catch (Exception)
         {
@@ -167,6 +170,7 @@ public class FileClient
 
         writer.Write(encryptData.Length);
         writer.Write(encryptData);
+        writer.Flush();
     }
 
     private string ReadString()
@@ -180,28 +184,42 @@ public class FileClient
     }
 
 
-    private bool AbstractOperation(Operation op, out string? answer, Action concreteOperation)
+    private bool AbstractOperation(Operation op, out string? answer, Action initOperation, Action invokeOperation)
     {
-        WriteOperation(op);
-
-        if (ReadOperation() != op)
+        try
         {
-            answer = ReadString();
+            WriteOperation(op);
+
+            if (ReadOperation() != op)
+            {
+                answer = ReadString();
+                return false;
+            }
+
+            initOperation();
+
+            if (ReadOperationStatus() != OperationStatus.Success)
+            {
+                answer = ReadString();
+                return false;
+            }
+            else
+            {
+                answer = ReadString();
+                invokeOperation();
+                return true;
+            }
+        }
+        catch
+        {
+            answer = "Internal server error";
             return false;
         }
+    }
 
-        if (ReadOperationStatus() != OperationStatus.Success)
-        {
-            answer = ReadString();
-            return false;
-        }
-        else
-        {
-            answer = ReadString();
-            concreteOperation();
-
-            return true;
-        }
+    public bool DeleteFile(string fileName, out string? answer)
+    {
+        return AbstractOperation(Operation.DeleteFile, out answer, () => { WriteString(fileName); }, () => { });
     }
 
     public bool GetFilesList(out string[]? filesList, out string? answer)
@@ -209,8 +227,12 @@ public class FileClient
         filesList = null;
         string[]? localFilesList = filesList;
 
-        bool res = AbstractOperation(Operation.GetFilesList, out answer,
-            () => { localFilesList = encoder.GetString(ReadData()).Split(","); });
+        bool res = AbstractOperation(Operation.GetFilesList, out answer, () => { },
+            () =>
+            {
+                localFilesList = encoder.GetString(ReadData()).Split(",");
+                WriteOperationStatus(OperationStatus.Success);
+            });
         filesList = localFilesList;
         return res;
     }
@@ -219,9 +241,12 @@ public class FileClient
     {
         data = null;
         byte[]? localData = data;
-
-
-        bool res = AbstractOperation(Operation.DownloadFile, out answer, () => { localData = ReadData(); });
+        bool res = AbstractOperation(Operation.DownloadFile, out answer,
+            () => { WriteString(Path.GetFileName(fileName)); }, () =>
+            {
+                localData = ReadData();
+                WriteOperationStatus(OperationStatus.Success);
+            });
 
         data = localData;
         return res;
@@ -229,24 +254,28 @@ public class FileClient
 
     public bool UploadFile(string fileName, byte[] data, out string? answer)
     {
-        return AbstractOperation(Operation.UploadFile, out answer, () =>
-        {
-            WriteString(Path.GetFileName(fileName));
-            WriteData(File.ReadAllBytes(fileName));
-        });
+        return AbstractOperation(Operation.UploadFile, out answer, () => { WriteString(Path.GetFileName(fileName)); },
+            () => { WriteData(data); });
     }
 
     public bool UpdateFile(string fileName, byte[] data, out string? answer)
     {
-        return AbstractOperation(Operation.UpdateFile, out answer, () =>
-        {
-            WriteString(Path.GetFileName(fileName));
-            WriteData(File.ReadAllBytes(fileName));
-        });
+        return AbstractOperation(Operation.UpdateFile, out answer, () => { WriteString(Path.GetFileName(fileName)); },
+            () => { WriteData(data); });
     }
 
     public bool CloseConnection(out string? answer)
     {
-        return AbstractOperation(Operation.CloseConnection, out answer, () => { });
+        return AbstractOperation(Operation.CloseConnection, out answer, () => { }, () => { });
+    }
+
+    public void Dispose()
+    {
+        client.Close();
+        client.Dispose();
+        reader?.Close();
+        reader?.Dispose();
+        writer?.Close();
+        writer?.Dispose();
     }
 }

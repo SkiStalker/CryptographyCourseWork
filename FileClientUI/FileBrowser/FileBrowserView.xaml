@@ -4,9 +4,25 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:FileClientUI"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-        <TextBlock>Hello world</TextBlock>
-    </Grid>
+             mc:Ignorable="d" >
+    <DockPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" DockPanel.Dock="Top">
+            <StackPanel.Resources>
+                <Style TargetType="{x:Type Button}">
+                    <Setter Property="Margin" Value="5,10,5,10"/>
+                </Style>
+            </StackPanel.Resources>
+            <Button Content="Download" IsEnabled="{Binding IsFileSelected}" Command="{Binding DownloadCommand}"/>
+            <Button Content="Upload" IsEnabled="{Binding NotCryptoActive}" Command="{Binding UploadCommand}"/>
+            <Button Content="Update" IsEnabled="{Binding IsFileSelected}" Command="{Binding UpdateCommand}"/>
+            <Button Content="Delete" IsEnabled="{Binding IsFileSelected}" Command="{Binding DeleteCommand}"/>
+            <Button Content="Refresh" IsEnabled="{Binding NotCryptoActive}" Command="{Binding RefreshCommand}"/>
+        </StackPanel>
+        <Label HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Top" Margin="0,0,0,10">Files</Label>
+        
+        <ProgressBar DockPanel.Dock="Bottom" Height="10" Visibility="{Binding CryptoActive}" Minimum="0" Maximum="{Binding MaxCryptoProgress, UpdateSourceTrigger=PropertyChanged}" Value="{Binding CurrentCryptoProgress, UpdateSourceTrigger=PropertyChanged}"/>
+
+        <ListBox DockPanel.Dock="Bottom" IsEnabled="{Binding NotCryptoActive}" ItemsSource="{Binding Files}" SelectedItem="{Binding SelectedFile}"/>
+        
+        </DockPanel>
 </UserControl>

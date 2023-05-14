@@ -17,7 +17,8 @@ public class FileServerClient
         UploadFile,
         DownloadFile,
         UpdateFile,
-        CloseConnection
+        CloseConnection,
+        DeleteFile
     }
 
     private enum OperationStatus : byte
@@ -28,25 +29,30 @@ public class FileServerClient
 
     private readonly TcpClient client;
     private readonly Config config;
-    private readonly Regex fileNameRegEx;
     private readonly UTF8Encoding encoder;
 
     public IPEndPoint? GetIpEndPoint()
     {
-        return client.Client.LocalEndPoint as IPEndPoint;
+        return client.Client.RemoteEndPoint as IPEndPoint;
     }
 
     public FileServerClient(TcpClient tcpClient, Config config)
     {
         client = tcpClient;
         this.config = config;
-        fileNameRegEx = new Regex(@"^[\w,\s-]+\.[A-Za-z]{3}$");
         encoder = new UTF8Encoding();
     }
 
     private bool CorrectFileName(string fileName)
     {
-        return fileNameRegEx.Matches(fileName).Count == 1;
+        char[] incorrectChars = Path.GetInvalidFileNameChars();
+        foreach (char c in fileName)
+        {
+            if (incorrectChars.Contains(c))
+                return false;
+        }
+        
+        return true;
     }
 
     private string MakeUniqueFileName(string fileName)
@@ -57,12 +63,12 @@ public class FileServerClient
             string tmpFilename = Path.GetFileNameWithoutExtension(fileName);
             string ext = Path.GetExtension(fileName);
 
-            while (File.Exists($"{config.RootPath}/{tmpFilename}_{i}.{ext}"))
+            while (File.Exists($"{config.RootPath}{tmpFilename}_{i}{ext}"))
             {
                 ext += 1;
             }
 
-            return $"{tmpFilename}_{i}.{ext}";
+            return $"{tmpFilename}_{i}{ext}";
         }
         else
         {
@@ -70,7 +76,19 @@ public class FileServerClient
         }
     }
 
-    private string ReadFileName(BinaryReader reader, Cipher cipher)
+    private void Logging(string msg)
+    {
+        IPEndPoint? endPoint = GetIpEndPoint();
+        if (endPoint != null)
+        {
+            Console.WriteLine($"Client with ip: {endPoint.Address} and port:{endPoint.Port} - {msg}");
+        }
+        else
+        {
+            Console.WriteLine(msg);
+        }
+    }
+    private string ReadString(BinaryReader reader, Cipher cipher)
     {
         return encoder.GetString(ReadData(reader, cipher));
     }
@@ -90,6 +108,11 @@ public class FileServerClient
     private void WriteOperationStatus(OperationStatus status, BinaryWriter writer, Cipher cipher)
     {
         WriteData(new byte[] { (byte)status }, writer, cipher);
+    }
+
+    private OperationalStatus ReadOperationStatus(BinaryReader reader, Cipher cipher)
+    {
+        return (OperationalStatus)ReadData(reader, cipher)[0];
     }
 
     private void WriteOperation(Operation op, BinaryWriter writer, Cipher cipher)
@@ -131,7 +154,7 @@ public class FileServerClient
         int encryptALength = reader.ReadInt32();
         byte[] encryptA = reader.ReadBytes(encryptALength);
         int encryptBLength = reader.ReadInt32();
-        byte[] encryptB = reader.ReadBytes(encryptALength);
+        byte[] encryptB = reader.ReadBytes(encryptBLength);
 
         BigInteger res = xtr.Decrypt(new XTR.EncryptedMessage()
             { A = new BigInteger(encryptA, true), B = new BigInteger(encryptB, true) }, privateKey);
@@ -157,18 +180,16 @@ public class FileServerClient
         WritePartPublicKey(publicKey.Y, writer);
         WritePartPublicKey(publicKey.G, writer);
         WritePartPublicKey(publicKey.P, writer);
+        writer.Flush();
 
-        
+
         byte[] sessionKey = ReadAsymmetricData(reader, xtr, privateKey);
 
         byte[] iv = ReadAsymmetricData(reader, xtr, privateKey);
 
-
         Cipher cipher = new Cipher(sessionKey, 160, Cipher.AlgorithmType.SHACAL1, Cipher.CryptRule.RD,
             Cipher.PaddingType.PKCS7, iv);
-
-
-        writer.Write((byte)OperationStatus.Success);
+        
 
         while (alive)
         {
@@ -179,15 +200,18 @@ public class FileServerClient
                 case Operation.GetFilesList:
                 {
                     WriteOperation(Operation.GetFilesList, writer, cipher);
+
                     WriteOperationStatus(OperationStatus.Success, writer, cipher);
+
                     WriteString("Read files list permitted", writer, cipher);
+                    writer.Flush();
                     string[] files = Directory.GetFiles(config.RootPath);
 
-                    IEnumerable<string> suitFiles = files.Where(File.Exists);
+                    IEnumerable<string?> suitFiles = files.Where(File.Exists).Select(Path.GetFileName);
                     string fileNames = string.Join(",", suitFiles);
 
                     WriteData(encoder.GetBytes(fileNames), writer, cipher);
-
+                    ReadOperationStatus(reader, cipher);
                     break;
                 }
                 case Operation.CloseConnection:
@@ -195,38 +219,63 @@ public class FileServerClient
                     WriteOperation(Operation.CloseConnection, writer, cipher);
                     WriteOperationStatus(OperationStatus.Success, writer, cipher);
                     WriteString("Close connection permitted", writer, cipher);
+                    writer.Flush();
                     alive = false;
                     break;
                 }
-                case Operation.DownloadFile:
+                case Operation.DeleteFile:
                 {
-                    WriteOperation(Operation.DownloadFile, writer, cipher);
-                    string fileName = ReadFileName(reader, cipher);
+                    WriteOperation(Operation.DeleteFile, writer, cipher);
+                    string fileName = ReadString(reader, cipher);
                     if (File.Exists($"{config.RootPath}/{fileName}"))
                     {
                         WriteOperationStatus(OperationStatus.Success, writer, cipher);
-                        WriteString($"Download file {fileName} permitted", writer, cipher);
-                        WriteData(File.ReadAllBytes($"{config.RootPath}/{fileName}"), writer, cipher);
+                        WriteString($"Delete file {fileName} permitted", writer, cipher);
+                        writer.Flush();
+                        File.Delete(Path.GetFullPath($"{config.RootPath}/{fileName}"));
                     }
                     else
                     {
                         WriteOperationStatus(OperationStatus.Error, writer, cipher);
                         WriteString($"File with name {fileName} is not exist", writer, cipher);
+                        writer.Flush();
+                    }
+                    
+                    break;
+                }
+                case Operation.DownloadFile:
+                {
+                    WriteOperation(Operation.DownloadFile, writer, cipher);
+                    string fileName = ReadString(reader, cipher);
+                    if (File.Exists($"{config.RootPath}/{fileName}"))
+                    {
+                        WriteOperationStatus(OperationStatus.Success, writer, cipher);
+                        WriteString($"Download file {fileName} permitted", writer, cipher);
+                        WriteData(File.ReadAllBytes(Path.GetFullPath($"{config.RootPath}/{fileName}")), writer, cipher);
+                        writer.Flush();
+                        ReadOperationStatus(reader, cipher);
+                    }
+                    else
+                    {
+                        WriteOperationStatus(OperationStatus.Error, writer, cipher);
+                        WriteString($"File with name {fileName} is not exist", writer, cipher);
+                        writer.Flush();
                     }
 
                     break;
                 }
                 case Operation.UpdateFile:
                 {
-                    WriteOperation(Operation.UploadFile, writer, cipher);
+                    WriteOperation(Operation.UpdateFile, writer, cipher);
 
-                    string fileName = ReadFileName(reader, cipher);
+                    string fileName = ReadString(reader, cipher);
 
-                    if (File.Exists(fileName))
+                    if (File.Exists($"{config.RootPath}/{fileName}"))
                     {
                         WriteOperationStatus(OperationStatus.Success, writer, cipher);
                         WriteString($"Update file {fileName} permitted", writer, cipher);
-                        using FileStream fStream = new FileStream($"{config.RootPath}/{fileName}",
+                        writer.Flush();
+                        using FileStream fStream = new FileStream( Path.GetFullPath($"{config.RootPath}/{fileName}"),
                             FileMode.Create);
                         fStream.Write(ReadData(reader, cipher));
                     }
@@ -234,21 +283,24 @@ public class FileServerClient
                     {
                         WriteOperationStatus(OperationStatus.Error, writer, cipher);
                         WriteString($"File with name \"{fileName}\" is not exist", writer, cipher);
+                        writer.Flush();
                     }
 
                     break;
                 }
                 case Operation.UploadFile:
                 {
-                    WriteOperation(Operation.UpdateFile, writer, cipher);
+                    WriteOperation(Operation.UploadFile, writer, cipher);
 
-                    string fileName = ReadFileName(reader, cipher);
+                    string fileName = ReadString(reader, cipher);
 
                     if (CorrectFileName(fileName))
                     {
                         WriteOperationStatus(OperationStatus.Success, writer, cipher);
+                        fileName = MakeUniqueFileName(fileName);
                         WriteString($"Upload file {fileName} permitted", writer, cipher);
-                        using FileStream fStream = new FileStream($"{config.RootPath}/{MakeUniqueFileName(fileName)}",
+                        writer.Flush();
+                        using FileStream fStream = new FileStream( Path.GetFullPath($"{config.RootPath}/{fileName}"),
                             FileMode.CreateNew);
                         fStream.Write(ReadData(reader, cipher));
                     }
@@ -256,6 +308,7 @@ public class FileServerClient
                     {
                         WriteOperationStatus(OperationStatus.Error, writer, cipher);
                         WriteString($"Incorrect file name \"{fileName}\"", writer, cipher);
+                        writer.Flush();
                     }
 
                     break;
@@ -264,6 +317,7 @@ public class FileServerClient
                 {
                     WriteOperation((Operation)0, writer, cipher);
                     WriteString($"Unknown operation", writer, cipher);
+                    writer.Flush();
                     break;
                 }
             }
